@@ -1,15 +1,28 @@
 from flask import Flask, jsonify, request
+from urllib.parse import urlparse
 import mysql.connector
 import os 
 app = Flask(__name__)
 
-#  Database Configuration
-db_config = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', '1234'),  
-    'database': os.getenv('DB_NAME', 'portfolio_db')
-}
+# Database Configuration
+if os.getenv('DB_URL'):
+    # We are on the Cloud (Render) - Parse the long URL
+    url = urlparse(os.getenv('DB_URL'))
+    db_config = {
+        'host': url.hostname,
+        'user': url.username,
+        'password': url.password,
+        'database': url.path[1:],  # Removes the leading '/'
+        'port': url.port
+    }
+else:
+    # We are on the Laptop (Localhost)
+    db_config = {
+        'host': 'localhost',
+        'user': 'root',
+        'password': '1234',  # Or whatever your local password is
+        'database': 'portfolio_db'
+    }
 # Helper function to get a database connection
 def get_db_connection():
     return mysql.connector.connect(**db_config)
