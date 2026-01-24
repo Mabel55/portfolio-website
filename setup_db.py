@@ -1,9 +1,8 @@
 import os
 import mysql.connector
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request # <--- Added request here
 from flask_cors import CORS
 from dotenv import load_dotenv
-from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -11,30 +10,16 @@ app = Flask(__name__)
 CORS(app)
 
 def get_db_connection():
-    # Check if DB_URL exists (This works for both Local .env AND Render)
-    if os.getenv('DB_URL'):
-        # Parse the long URL into pieces
-        url = urlparse(os.getenv('DB_URL'))
-        return mysql.connector.connect(
-            host=url.hostname,
-            user=url.username,
-            password=url.password,
-            database=url.path[1:], # Removes the slash
-            port=url.port,
-            ssl_disabled=False
-        )
-    
-    # Fallback (Just in case)
     return mysql.connector.connect(
-        host=os.getenv('DB_HOST'),
+        host='mysql-1de56a9b-nasaadanna-6430.j.aivencloud.com',
         user=os.getenv('DB_USER'),
         password=os.getenv('DB_PASSWORD'),
-        database=os.getenv('DB_NAME'),
-        port=int(os.getenv('DB_PORT', 3306))
+        database='defaultdb',
+        port=11988,
+        ssl_disabled=False
     )
 
-# --- ENDPOINTS ---
-
+# 1. BIO (GET)
 @app.route('/api/bio')
 def get_bio():
     try:
@@ -48,6 +33,7 @@ def get_bio():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# 2. PROJECTS (GET)
 @app.route('/api/projects')
 def get_projects():
     try:
@@ -61,6 +47,7 @@ def get_projects():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# 3. SKILLS (GET)
 @app.route('/api/skills')
 def get_skills():
     try:
@@ -74,18 +61,27 @@ def get_skills():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+# 4. CONTACT FORM (POST)
 @app.route('/api/contact', methods=['POST'])
 def contact_form():
     try:
-        data = request.json
+        data = request.json # Get the data sent from Frontend
+        name = data.get('name')
+        email = data.get('email')
+        message = data.get('message')
+
         conn = get_db_connection()
         cursor = conn.cursor()
+        
+        # Save the message to the database
         query = "INSERT INTO messages (name, email, message) VALUES (%s, %s, %s)"
-        cursor.execute(query, (data.get('name'), data.get('email'), data.get('message')))
-        conn.commit()
+        cursor.execute(query, (name, email, message))
+        
+        conn.commit() # Save changes
         cursor.close()
         conn.close()
-        return jsonify({"message": "Message sent!"}), 201
+        
+        return jsonify({"message": "Message sent successfully!"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
