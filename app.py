@@ -1,9 +1,8 @@
-import os
-import mysql.connector
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+import mysql.connector
+import os
 from dotenv import load_dotenv
-from urllib.parse import urlparse
 
 load_dotenv()
 
@@ -11,83 +10,88 @@ app = Flask(__name__)
 CORS(app)
 
 def get_db_connection():
-    # Check if DB_URL exists (This works for both Local .env AND Render)
-    if os.getenv('DB_URL'):
-        # Parse the long URL into pieces
-        url = urlparse(os.getenv('DB_URL'))
-        return mysql.connector.connect(
-            host=url.hostname,
-            user=url.username,
-            password=url.password,
-            database=url.path[1:], # Removes the slash
-            port=url.port,
-            ssl_disabled=False
-        )
-    
-    # Fallback (Just in case)
     return mysql.connector.connect(
         host=os.getenv('DB_HOST'),
         user=os.getenv('DB_USER'),
         password=os.getenv('DB_PASSWORD'),
         database=os.getenv('DB_NAME'),
-        port=int(os.getenv('DB_PORT', 3306))
+        port=int(os.getenv('DB_PORT')),
+        ssl_disabled=True
     )
 
-# --- ENDPOINTS ---
-
-@app.route('/api/bio')
+# --- 1. BIO ENDPOINT (Updated to include Resume & Stats automatically) ---
+@app.route('/api/bio', methods=['GET'])
 def get_bio():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM users WHERE id = 1')
-        data = cursor.fetchone()
-        cursor.close()
+        # SELECT * will automatically pick up the new 'resume_url' and 'stat_years' columns!
+        cursor.execute("SELECT * FROM bio LIMIT 1")
+        bio = cursor.fetchone()
         conn.close()
-        return jsonify(data) if data else (jsonify({"error": "No bio found"}), 404)
+        return jsonify(bio)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/projects')
+# --- 2. PROJECTS ENDPOINT ---
+@app.route('/api/projects', methods=['GET'])
 def get_projects():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM projects')
-        data = cursor.fetchall()
-        cursor.close()
+        cursor.execute("SELECT * FROM projects")
+        projects = cursor.fetchall()
         conn.close()
-        return jsonify(data)
+        return jsonify(projects)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/skills')
+# --- 3. SKILLS ENDPOINT ---
+@app.route('/api/skills', methods=['GET'])
 def get_skills():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        cursor.execute('SELECT * FROM skills')
-        data = cursor.fetchall()
-        cursor.close()
+        cursor.execute("SELECT * FROM skills")
+        skills = cursor.fetchall()
         conn.close()
-        return jsonify(data)
+        return jsonify(skills)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/contact', methods=['POST'])
-def contact_form():
+# --- 4. SERVICES ENDPOINT (!!! NEW !!!) ---
+@app.route('/api/services', methods=['GET'])
+def get_services():
     try:
-        data = request.json
         conn = get_db_connection()
-        cursor = conn.cursor()
-        query = "INSERT INTO messages (name, email, message) VALUES (%s, %s, %s)"
-        cursor.execute(query, (data.get('name'), data.get('email'), data.get('message')))
-        conn.commit()
-        cursor.close()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM services")
+        services = cursor.fetchall()
         conn.close()
-        return jsonify({"message": "Message sent!"}), 201
+        return jsonify(services)
+    except Exception as e:
+        # If the table doesn't exist yet, return an empty list instead of crashing
+        return jsonify([]), 200 
+
+# --- 5. TESTIMONIALS ENDPOINT ---
+@app.route('/api/testimonials', methods=['GET'])
+def get_testimonials():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM testimonials")
+        testimonials = cursor.fetchall()
+        conn.close()
+        return jsonify(testimonials)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# --- 6. CONTACT ENDPOINT ---
+@app.route('/api/contact', methods=['POST'])
+def contact():
+    data = request.json
+    # In a real app, you would save this to DB or send an email here
+    return jsonify({"message": "Message received!", "data": data}), 201
 
 if __name__ == '__main__':
     app.run(debug=True)
