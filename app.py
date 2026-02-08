@@ -19,17 +19,23 @@ def get_db_connection():
         ssl_disabled=True
     )
 
-# --- 1. BIO ENDPOINT (Updated to include Resume & Stats automatically) ---
 @app.route('/api/bio', methods=['GET'])
 def get_bio():
     try:
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
-        # SELECT * will automatically pick up the new 'resume_url' and 'stat_years' columns!
-        cursor.execute("SELECT * FROM bio LIMIT 1")
+        
+        # ✅ CORRECTED: We select from 'users', not 'bio'
+        cursor.execute("SELECT * FROM users LIMIT 1")
         bio = cursor.fetchone()
+        
         conn.close()
-        return jsonify(bio)
+        
+        if bio:
+            return jsonify(bio)
+        else:
+            return jsonify({"error": "No user data found"}), 404
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
