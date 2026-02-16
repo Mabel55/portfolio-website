@@ -38,6 +38,11 @@ def get_bio():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+# --- WAKE UP ENDPOINT (To keep Render awake) ---
+@app.route('/api/ping', methods=['GET'])
+def ping():
+    return jsonify({"status": "I am awake!"}), 200
 
 # --- 2. PROJECTS ENDPOINT ---
 @app.route('/api/projects', methods=['GET'])
@@ -49,19 +54,6 @@ def get_projects():
         projects = cursor.fetchall()
         conn.close()
         return jsonify(projects)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-# --- 3. SKILLS ENDPOINT ---
-@app.route('/api/skills', methods=['GET'])
-def get_skills():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM skills")
-        skills = cursor.fetchall()
-        conn.close()
-        return jsonify(skills)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -141,10 +133,7 @@ def setup_data():
         bio_val = ("Michael Owoeye", "Product Project Manager", "Strategic and user-centric Product Project Manager with over a decade of experience.", "My name is Michael Owoeye. I am a strategic and user-centric Product Project Manager with over a decade of experience leading digital product development projects from idea to launch. With a strong background in product design, project delivery, agile methodology, and cross-functional team leadership, I specialize in transforming business goals into intuitive digital solutions.", "owoeyemo@gmail.com", "+2348028753665", "https://linkedin.com/in/owoeyemichael", "https://github.com/owoeyemo", "https://www.owoeyemichael.com.ng")
         cursor.execute("INSERT INTO users (name, role, intro, description, email, phone, linkedin, github, website) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", bio_val)
 
-        # --- Skills ---
-        skills = [("Product Discovery & Strategy",), ("Agile & Scrum Methodologies",), ("Wireframing & Prototyping (Figma, Miro)",), ("Strategic Roadmapping",), ("User Research",), ("Data-Driven Decision Making",), ("Cross-Functional Team Leadership",), ("Product Analytics (Mixpanel, GA)",), ("Go-To-Market Strategy",), ("PMO Leadership",), ("Jira, Asana, Trello",)]
-        cursor.executemany("INSERT INTO skills (name) VALUES (%s)", skills)
-
+       
         # --- Projects ---
         projects = [
             ("Spectrum Aesthetics App", "A HIPAA-compliant client portal and mobile application designed for a cosmetic surgery practice.", "Mobile App, Healthcare Tech, HIPAA", "https://spectrumaesthetics.com", "https://via.placeholder.com/600x400?text=Spectrum"),
